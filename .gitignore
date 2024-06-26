@@ -3,3 +3,4 @@ config.txt
 extra.txt
 ToDo.txt
 dist/
+.env
