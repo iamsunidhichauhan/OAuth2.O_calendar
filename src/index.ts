@@ -23,7 +23,7 @@ app.post('/signup', signup);
 app.post('/login', login);
 app.get('/oauth2callback', oauth2callback);
 app.post('/create-event', createEvent);
-// app.post(`/createNewCalendar`,createNewCalendar)
+app.post(`/createNewCalendar`,createNewCalendar)
 app.post('/bookSlot',bookSlot)
 app.get('/findSlots',findSlots)
 

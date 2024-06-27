@@ -32,6 +32,9 @@ const userSchema = new mongoose.Schema({
   },
   calendarId:{
     type :String
+  },
+  token:{
+    type :String
   }
 }, {
   timestamps: true

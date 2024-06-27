@@ -9,7 +9,7 @@ import TimeSlot from "../models/timeSlot";
 import * as validator from '../validations/validator';
 import { encodeToken, decodeToken } from '../utilities/utils';
 
-require('dotenv').config(); // Load environment variables from .env file
+require('dotenv').config(); 
 
 const secretKey = "secret_Key";
 const oauth2Client = new google.auth.OAuth2(
@@ -59,34 +59,6 @@ export const signup = async (req: Request, res: Response) => {
   }
 };
 
-export const createNewCalendar = async (user: any) => {
-  try {
-    oauth2Client.setCredentials({
-      access_token: user.accessToken,
-      refresh_token: user.refreshToken,
-    });
-
-    const calendar = google.calendar({ version: "v3", auth: oauth2Client });
-
-    const newCalendar = {
-      summary: "My App Calendar",
-      timeZone: "Asia/Kolkata",
-    };
-
-    const response = await calendar.calendars.insert({
-      requestBody: newCalendar,
-    });
-
-    // Save the new calendar ID in your database associated with the user
-    user.calendarId = response.data.id;
-    await user.save();
-    return response.data;
-  } catch (error) {
-    console.error("Error creating new calendar:", error);
-    throw error;
-  }
-};
-
 export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
@@ -96,20 +68,14 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    if (!user.accessToken || !user.refreshToken) {
-      const authUrl = oauth2Client.generateAuthUrl({
-        access_type: "offline",
-        scope: ["https://www.googleapis.com/auth/calendar"],
-        state: JSON.stringify({ email }),
-      });
+    const token = jwt.sign(
+      { userId: user._id, email: user.email },
+      secretKey,
+      { expiresIn: "24h" }
+    );
 
-      return res.json({ authUrl });
-    }
-
-    // Check if the calendar is already created
-    if (!user.calendarId) {
-      await createNewCalendar(user);
-    }
+    user.token = token; 
+    await user.save(); 
 
     res.status(200).json({ message: "Login successful", user });
   } catch (error: any) {
@@ -118,91 +84,94 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-// export async function oauth2callback(req: Request, res: Response): Promise<void> {
-//   try {
-//     const { code, state } = req.query;
-//     const { email } = JSON.parse(state as string);
-//     console.log("email is : ", email );
-
-//     const { tokens } = await oauth2Client.getToken(code as string);
-//     console.log("tokens are :", tokens)
-
-//     const user = await User.findOne({ email });
-//     console.log("user is:  ", user)
-
-//     if (user) {
-//       // Encode tokens before saving
-//       user.accessToken = encodeToken(tokens.access_token!);
-//       user.refreshToken = encodeToken(tokens.refresh_token!);
-//       await user.save();
-
-//       console.log("user with encoded tokens : ", user)
-
-//       // Create a new calendar if not already created
-//       if (!user.calendarId) {
-//         await createNewCalendar(user);
-//       }
-
-//       // Redirect or respond with success message
-//       res.send("OAuth callback successful! You can close this window.");
-//     } else {
-//       res.status(400).json({ message: "User not found" });
-//     }
-//   } catch (error: any) {
-//     console.error("Error during OAuth2 callback:", error);
-//     res
-//       .status(500)
-//       .json({ message: `Error during OAuth2 callback: ${error.message}` });
-//   }
-// }
 export async function oauth2callback(req: Request, res: Response): Promise<void> {
   try {
     const { code, state } = req.query;
     const { email } = JSON.parse(state as string);
-
     const { tokens } = await oauth2Client.getToken(code as string);
 
     const user = await User.findOne({ email });
 
     if (user) {
-      user.accessToken = tokens.access_token!;
-      user.refreshToken = tokens.refresh_token!;
+      user.accessToken = encodeToken(tokens.access_token!);
+      user.refreshToken = encodeToken(tokens.refresh_token!);
       await user.save();
 
-      // Create a new calendar if not already created
-      if (!user.calendarId) {
-        await createNewCalendar(user);
-      }
+      oauth2Client.setCredentials({
+        access_token: decodeToken(user.accessToken),
+        refresh_token: decodeToken(user.refreshToken),
+      });
 
-      // Redirect or respond with success message
-      res.send("OAuth callback successful! You can close this window.");
+      const calendar = google.calendar({ version: "v3", auth: oauth2Client });
+
+      const newCalendar = {
+        summary: "My App Calendar",
+        timeZone: "Asia/Kolkata",
+      };
+
+      const response = await calendar.calendars.insert({
+        requestBody: newCalendar,
+      });
+
+      user.calendarId = response.data.id;
+      await user.save();
+
+      res.send("OAuth callback successful! Calendar created. You can close this window.");
     } else {
       res.status(400).json({ message: "User not found" });
     }
   } catch (error: any) {
     console.error("Error during OAuth2 callback:", error);
-    res
-      .status(500)
-      .json({ message: `Error during OAuth2 callback: ${error.message}` });
+    res.status(500).json({ message: `Error during OAuth2 callback: ${error.message}` });
   }
 }
+
+
+export const createNewCalendar = async (req: Request, res: Response) => {
+  try {
+    console.log(1)
+    const token = req.headers.authorization; 
+    console.log(token)
+    if (!token) {
+      return res.status(401).json({ message: "Authorization token missing" });
+    }
+
+    const decoded = jwt.verify(token, secretKey) as any;
+    const user = await User.findById(decoded.userId);
+
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    const authUrl = oauth2Client.generateAuthUrl({
+      access_type: "offline",
+      scope: ["https://www.googleapis.com/auth/calendar"],
+      state: JSON.stringify({ email: user.email }),
+    });
+
+    res.status(200).json({ authUrl });
+  } catch (error: any) {
+    console.error("Error creating new calendar:", error);
+    res.status(500).json({ message: `Error creating new calendar: ${error.message}` });
+  }
+};
 
 export const createEvent = async (req: Request, res: Response) => {
   try {
     const { email, date, startTime, endTime, summary, description } = req.body;
     const user = await User.findOne({ email });
 
-    if (!user || !user.accessToken || !user.calendarId) {
+    if (!user || !user.accessToken || !user.calendarId || !user.refreshToken) {
       return res
         .status(400)
         .json({
           message: "User not authenticated with Google or calendar not created",
         });
     }
-
+    
     oauth2Client.setCredentials({
-      access_token: user.accessToken,
-      refresh_token: user.refreshToken,
+      access_token: decodeToken(user.accessToken),
+      refresh_token: decodeToken(user.refreshToken),
     });
     const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
