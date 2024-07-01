@@ -1,6 +1,7 @@
+// src/models/meetings.ts
 import mongoose from 'mongoose';
 
-const timeSlotSchema = new mongoose.Schema({
+const meetingsSchema = new mongoose.Schema({
   creator: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -12,13 +13,18 @@ const timeSlotSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String },
   isBooked: { type: Boolean, default: false },
-  bookingId: {
+  eventId: {
+    type: String,
+  //   type: mongoose.Schema.Types.ObjectId,
+  //   required: true, 
+  },
+    bookingId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Booking',
     required: false,
   },
 });
 
-const TimeSlot = mongoose.model('TimeSlot', timeSlotSchema);
+const Meetings = mongoose.model('Meetings', meetingsSchema); 
 
-export default TimeSlot;
+export default Meetings;

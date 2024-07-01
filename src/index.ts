@@ -6,8 +6,8 @@ import express, { NextFunction, Request, Response } from 'express';
 // import session, { SessionData } from "express-session";
 // import crypto from "crypto";
 import mongoose from 'mongoose';
-import { signup, login, oauth2callback, createEvent,createNewCalendar } from './controllers/authControllers';
-import { bookSlot } from './controllers/bookingController';
+import { signup, login, oauth2callback, createEvent,createNewCalendar,provideAccess,assignCalendar  } from './controllers/authControllers';
+import { bookevent } from './controllers/bookingController';
 import{findSlots} from './controllers/userController';
 import bodyParser from 'body-parser';
 
@@ -23,10 +23,11 @@ app.post('/signup', signup);
 app.post('/login', login);
 app.get('/oauth2callback', oauth2callback);
 app.post('/create-event', createEvent);
-app.post(`/createNewCalendar`,createNewCalendar)
-app.post('/bookSlot',bookSlot)
+app.post('/createNewCalendar',createNewCalendar)
+app.post('/bookevent',bookevent)
 app.get('/findSlots',findSlots)
-
+app.get('/provideAccess',provideAccess)
+app.post('/assignCalendar',assignCalendar)
 
 
 // server configuration:

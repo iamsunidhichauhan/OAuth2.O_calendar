@@ -24,6 +24,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  role: {
+    type: String,
+    enum: ["admin", "employee"]
+  },
   accessToken:{
     type : String,
   },
@@ -35,7 +39,7 @@ const userSchema = new mongoose.Schema({
   },
   token:{
     type :String
-  }
+  },
 }, {
   timestamps: true
 });
