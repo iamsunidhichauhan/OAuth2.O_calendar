@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 
 const bookingSchema = new mongoose.Schema({
-  slotId: {
+  eventId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'TimeSlot',
+    ref: 'Meetings',
     required: true,
   },
   email: { type: String, required: true },
@@ -14,3 +14,4 @@ const bookingSchema = new mongoose.Schema({
 const Booking = mongoose.model('Booking', bookingSchema);
 
 export default Booking;
+

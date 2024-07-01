@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import User from "../models/user";
 import bcrypt from 'bcrypt';
-import TimeSlot from '../models/timeSlot';
+import TimeSlot from '../models/meetings';
 
 
 
